@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <title>Conversor de Arquivos</title>
+  <link rel="stylesheet" href="./dist/output.css">
+</head>
+<body class="min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-6 px-4">
+  <input type="file" id="fileInput" accept=".csv,.json,.xml" class="hidden" />
+
+<select id="formatoSaida" class="hidden">
+  <option value="json">JSON</option>
+  <option value="csv">CSV</option>
+  <option value="xml">XML</option>
+</select>
+
+  <h1 id="saudacao" class="text-3xl font-bold text-gray-800">Carregando...</h1>
+
+  <p class="text-gray-600">Selecione o tipo de conversão que você gostaria de fazer</p>
+
+  <button id="btnAbrirModal" class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition">
+    Clique aqui
+  </button>
+
+  <div id="areaDrop" class="w-96 h-48 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center gap-2 text-gray-400">
+    <span class="text-sm">Arraste seu arquivo para aqui dentro</span>
+  </div>
+
+  <pre id="resultado" class="w-96 max-h-64 overflow-auto bg-white border border-gray-200 rounded-lg p-4 text-sm text-gray-700"></pre>
+
+  <button id="btnBaixar" disabled class="px-6 py-2 bg-blue-600 text-white rounded-lg disabled:opacity-40 disabled:cursor-not-allowed hover:bg-blue-700 transition">
+    Baixar arquivo
+  </button>
+
+  <script type="module" src="./dist/main.js"></script>
+</body>
+</html>
