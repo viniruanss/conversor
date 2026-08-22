@@ -23,11 +23,6 @@ function pegarSaudacao() {
         return "Boa noite!";
     }
 }
-function pegarExtensao(nomeArquivo) {
-    const partes = nomeArquivo.split(".");
-    const extensao = partes.pop()?.toLowerCase() ?? "";
-    return extensao;
-}
 function jsonParaCsv(json) {
     if (json.length === 0)
         return "";
@@ -61,10 +56,11 @@ function gerarNomeArquivo(nomeOriginal, novoFormato) {
     return partes.join(".");
 }
 const fileInput = document.querySelector("#fileInput");
-const botaoConverter = document.querySelector("#btnConverter");
 const botaoBaixar = document.querySelector("#btnBaixar");
 const resultado = document.querySelector("#resultado");
-const formatoSaida = document.querySelector("#formatoSaida");
+const blocoResultado = document.querySelector("#blocoResultado");
+const arquivoSelecionadoBloco = document.querySelector("#arquivoSelecionado");
+const nomeArquivoSelecionadoSpan = document.querySelector("#nomeArquivoSelecionado");
 let textoConvertido = "";
 let nomeArquivoConvertido = "";
 let tipoMimeConvertido = "";
@@ -89,19 +85,33 @@ function baixarArquivo(conteudo, nomeArquivo, tipoMime) {
     link.click();
     URL.revokeObjectURL(url);
 }
-botaoConverter?.addEventListener("click", () => {
-    const arquivo = fileInput?.files?.[0];
-    if (!arquivo) {
-        alert("Selecione um arquivo primeiro!");
+const toast = document.querySelector("#toast");
+const toastMensagem = document.querySelector("#toastMensagem");
+let toastTimeoutId;
+function mostrarToast(mensagem) {
+    if (!toast || !toastMensagem)
         return;
+    toastMensagem.textContent = mensagem;
+    toast.classList.remove("hidden");
+    if (toastTimeoutId) {
+        clearTimeout(toastTimeoutId);
     }
-    const formatoEntrada = pegarExtensao(arquivo.name);
+    toastTimeoutId = setTimeout(() => {
+        toast.classList.add("hidden");
+    }, 3500);
+}
+function processarArquivo(arquivo) {
+    if (arquivoSelecionadoBloco && nomeArquivoSelecionadoSpan) {
+        nomeArquivoSelecionadoSpan.textContent = arquivo.name;
+        arquivoSelecionadoBloco.classList.remove("hidden");
+        arquivoSelecionadoBloco.classList.add("flex");
+    }
     const reader = new FileReader();
     reader.addEventListener("load", () => {
         const conteudo = reader.result;
         if (!resultado)
             return;
-        const conversao = `${formatoEntrada}-${formatoSaida?.value}`;
+        const conversao = `${formatoEntradaEscolhido}-${formatoSaidaEscolhida}`;
         switch (conversao) {
             case "csv-json":
                 textoConvertido = JSON.stringify(csvParaJson(conteudo), null, 2);
@@ -122,20 +132,99 @@ botaoConverter?.addEventListener("click", () => {
                 textoConvertido = jsonParaCsv(xmlParaJson(conteudo));
                 break;
             default:
-                alert(`Conversão de "${formatoEntrada}" para "${formatoSaida?.value}" não é suportada.`);
+                mostrarToast(`Conversão de "${formatoEntradaEscolhido}" para "${formatoSaidaEscolhida}" não é suportada.`);
                 return;
         }
         resultado.textContent = textoConvertido;
-        nomeArquivoConvertido = gerarNomeArquivo(arquivo.name, formatoSaida?.value ?? "txt");
-        tipoMimeConvertido = pegarTipoMime(formatoSaida?.value ?? "");
+        blocoResultado?.classList.remove("hidden");
+        blocoResultado?.classList.add("flex");
+        nomeArquivoConvertido = gerarNomeArquivo(arquivo.name, formatoSaidaEscolhida || "txt");
+        tipoMimeConvertido = pegarTipoMime(formatoSaidaEscolhida);
         if (botaoBaixar) {
             botaoBaixar.disabled = false;
         }
+        mostrarToast("Conversão concluída! Já pode baixar o arquivo.");
     });
     reader.readAsText(arquivo);
+}
+fileInput?.addEventListener("change", () => {
+    const arquivo = fileInput?.files?.[0];
+    if (!arquivo)
+        return;
+    processarArquivo(arquivo);
 });
 botaoBaixar?.addEventListener("click", () => {
     baixarArquivo(textoConvertido, nomeArquivoConvertido, tipoMimeConvertido);
+});
+const btnAbrirModal = document.querySelector("#btnAbrirModal");
+const modalOverlay = document.querySelector("#modalOverlay");
+const btnFecharModal = document.querySelector("#btnFecharModal");
+const opcoesConversao = document.querySelectorAll(".opcaoConversao");
+const badgeConversaoEscolhida = document.querySelector("#badgeConversaoEscolhida");
+let formatoEntradaEscolhido = "";
+let formatoSaidaEscolhida = "";
+function conversaoFoiEscolhida() {
+    return formatoEntradaEscolhido !== "" && formatoSaidaEscolhida !== "";
+}
+function atualizarBadgeConversao() {
+    if (!badgeConversaoEscolhida)
+        return;
+    badgeConversaoEscolhida.textContent = `${formatoEntradaEscolhido.toUpperCase()} → ${formatoSaidaEscolhida.toUpperCase()}`;
+    badgeConversaoEscolhida.classList.remove("hidden");
+    badgeConversaoEscolhida.classList.add("flex");
+}
+btnAbrirModal?.addEventListener("click", () => {
+    modalOverlay?.classList.remove("hidden");
+});
+btnFecharModal?.addEventListener("click", () => {
+    modalOverlay?.classList.add("hidden");
+});
+modalOverlay?.addEventListener("click", (event) => {
+    if (event.target === modalOverlay) {
+        modalOverlay.classList.add("hidden");
+    }
+});
+opcoesConversao.forEach((botao) => {
+    botao.addEventListener("click", () => {
+        formatoEntradaEscolhido = botao.dataset.entrada ?? "";
+        formatoSaidaEscolhida = botao.dataset.saida ?? "";
+        atualizarBadgeConversao();
+        modalOverlay?.classList.add("hidden");
+        fileInput?.click();
+    });
+});
+const elementoSaudacao = document.querySelector("#saudacao");
+if (elementoSaudacao) {
+    elementoSaudacao.textContent = `Olá, ${pegarSaudacao()}`;
+}
+const areaDrop = document.querySelector("#areaDrop");
+areaDrop?.addEventListener("click", () => {
+    if (!conversaoFoiEscolhida()) {
+        mostrarToast("Escolha o tipo de conversão antes de selecionar o arquivo.");
+        modalOverlay?.classList.remove("hidden");
+        return;
+    }
+    fileInput?.click();
+});
+areaDrop?.addEventListener("dragover", (event) => {
+    event.preventDefault();
+    areaDrop.classList.add("border-indigo-400", "bg-indigo-50/50");
+});
+areaDrop?.addEventListener("dragleave", () => {
+    areaDrop.classList.remove("border-indigo-400", "bg-indigo-50/50");
+});
+areaDrop?.addEventListener("drop", (event) => {
+    event.preventDefault();
+    areaDrop.classList.remove("border-indigo-400", "bg-indigo-50/50");
+    const arquivo = event.dataTransfer?.files?.[0];
+    if (!arquivo)
+        return;
+    if (!conversaoFoiEscolhida()) {
+        mostrarToast("Escolha o tipo de conversão antes de soltar o arquivo!");
+        modalOverlay?.classList.remove("hidden");
+        return;
+    }
+    processarArquivo(arquivo);
 });
 export {};
 //# sourceMappingURL=main.js.map
